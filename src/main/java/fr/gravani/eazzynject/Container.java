@@ -55,7 +55,7 @@ public class Container {
             } else {
                 return injectIntoFields(cls);
             }
-        } catch (NoSuchFieldException e) {
+        } catch (NoSuchMethodException e) {
             throw new NoDefaultConstructorException(
                     String.format("Could not find a default constructor or an " +
                             "injectable constructor for the injectable class %s", cls.getName()));
