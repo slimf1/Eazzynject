@@ -1,6 +1,8 @@
 package fr.gravani.eazzynject;
 
 import fr.gravani.eazzynject.annotations.Inject;
+import fr.gravani.eazzynject.exceptions.ImplementationNotFoundException;
+import fr.gravani.eazzynject.exceptions.NoDefaultConstructorException;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -19,20 +21,30 @@ public class Container {
 
     @SuppressWarnings("unchecked")
     public <T> T instantiate(Class<T> inter) {
-        var implementation = getImplementationFromBase(inter);
+        Class<?> implementation = null;
+        try {
+            implementation = getImplementationFromBase(inter);
+        } catch (ImplementationNotFoundException e) {
+            e.printStackTrace();
+            return null;
+        }
 
         if (instanceCache.containsKey(implementation)) {
             return (T)instanceCache.get(implementation);
         }
 
-        //var instance = implementation.getDeclaredConstructor().newInstance();
-        var instance = injectIntoClass(implementation);
-        instanceCache.put(implementation, instance);
+        Object instance = null;
+        try {
+            instance = injectIntoClass(implementation);
+            instanceCache.put(implementation, instance);
+        } catch (NoDefaultConstructorException e) {
+            e.printStackTrace();
+        }
 
         return (T)instance;
     }
 
-    public <T> T injectIntoClass(Class<T> cls) {
+    public <T> T injectIntoClass(Class<T> cls) throws NoDefaultConstructorException {
         try {
             var injectableConstructors = Arrays.stream(cls.getConstructors())
                     .filter(c -> c.isAnnotationPresent(Inject.class))
@@ -43,9 +55,13 @@ public class Container {
             } else {
                 return injectIntoFields(cls);
             }
+        } catch (NoSuchFieldException e) {
+            throw new NoDefaultConstructorException(
+                    String.format("Could not find a default constructor or an " +
+                            "injectable constructor for the injectable class %s", cls.getName()));
         } catch (ReflectiveOperationException e) {
             e.printStackTrace();
-            return null; // TODO : faire plus
+            return null; // TODO : faire plus?
         }
     }
 
@@ -73,7 +89,7 @@ public class Container {
     }
 
     // TODO: passer par un tag
-    private Class<?> getImplementationFromBase(Class<?> baseClass) {
+    private Class<?> getImplementationFromBase(Class<?> baseClass) throws ImplementationNotFoundException {
         var implementations = dependencies
                 .entrySet()
                 .stream()
@@ -81,7 +97,8 @@ public class Container {
                 .collect(Collectors.toSet());
 
         if (implementations.isEmpty()) {
-            throw new RuntimeException("There is not implementation for class NOM"); // TODO: custom ex
+            throw new ImplementationNotFoundException(
+                    String.format("Could not find any implementation for base class %s", baseClass.getName()));
         }
 
         if (implementations.size() == 1) {
