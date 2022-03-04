@@ -2,6 +2,7 @@ package fr.gravani.eazzynject;
 
 import fr.gravani.eazzynject.annotations.Inject;
 import fr.gravani.eazzynject.annotations.Injectable;
+import lombok.Getter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -20,9 +21,26 @@ public class ContainerTest {
     }
 
     @Injectable
-    static class MyUselessService {
+    static class MySuperUselessService {
         public String getValue() {
-            return "useless";
+            return "super useless";
+        }
+    }
+
+    @Injectable
+    static class MyUselessService {
+        @Inject
+        private MySuperUselessService mySuperUselessService;
+
+        public String getValue() {
+            return "useless "+ mySuperUselessService.getValue();
+        }
+    }
+
+    @Injectable
+    static class MyOtherUselessService {
+        public String getValue() {
+            return "other useless";
         }
     }
 
@@ -52,12 +70,21 @@ public class ContainerTest {
 
     @Injectable
     static class DarkWebHttpService implements HttpService {
+
+        @Getter
+        private MyOtherUselessService myOtherUselessService;
+
         @Inject
         private MyUselessService myUselessService;
 
+        @Inject
+        void setMyOtherUselessService(MyOtherUselessService myOtherUselessService) {
+            this.myOtherUselessService = myOtherUselessService;
+        }
+
         @Override
         public String getString() {
-            return "hi "+ myUselessService.getValue();
+            return "hi " + myUselessService.getValue() + " " + myOtherUselessService.getValue();
         }
     }
 
@@ -72,10 +99,12 @@ public class ContainerTest {
         container.registerMapping(DarkWebHttpService.class, HttpService.class);
         container.registerMapping(RssNewsService.class, NewsService.class);
         container.registerMapping(MyUselessService.class, MyUselessService.class);
+        container.registerMapping(MyOtherUselessService.class, MyOtherUselessService.class);
+        container.registerMapping(MySuperUselessService.class, MySuperUselessService.class);
 
         var newsService = container.instantiate(NewsService.class);
         assertTrue(newsService.getHttpService() instanceof DarkWebHttpService);
-        assertEquals(newsService.getHttpService().getString(), "hi useless");
-        assertEquals(newsService.toString(), "RssNewsService: useless");
+        assertEquals(newsService.getHttpService().getString(), "hi useless super useless other useless");
+        assertEquals(newsService.toString(), "RssNewsService: useless super useless");
     }
 }

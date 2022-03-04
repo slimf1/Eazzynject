@@ -6,8 +6,10 @@ import fr.gravani.eazzynject.exceptions.ImplementationAmbiguityException;
 import fr.gravani.eazzynject.exceptions.ImplementationNotFoundException;
 import fr.gravani.eazzynject.exceptions.NoDefaultConstructorException;
 
+import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,6 +31,7 @@ public class Container {
     @SuppressWarnings("unchecked")
     private <T> T instantiate(Class<T> inter, String tag)
             throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException {
+
         var implementation = getImplementationFromBase(inter, tag);
 
         if (instanceCache.containsKey(implementation)) {
@@ -43,6 +46,7 @@ public class Container {
 
     private <T> T injectIntoClass(Class<T> cls)
             throws NoDefaultConstructorException, ImplementationNotFoundException, ImplementationAmbiguityException {
+
         try {
             var injectableConstructors = Arrays.stream(cls.getDeclaredConstructors())
                     .filter(c -> c.isAnnotationPresent(Inject.class))
@@ -54,10 +58,11 @@ public class Container {
             if (!injectableConstructors.isEmpty()) {
                 instance = injectIntoConstructor(injectableConstructors.stream().findFirst().get());
             }
+
             if (instance == null) {
-                instance = injectIntoFields(cls);
+                instance = injectIntoFieldsAndSetter(cls);
             } else {
-                injectIntoFields(cls, instance);
+                injectIntoFieldsAndSetter(cls, instance);
             }
 
             return instance;
@@ -71,46 +76,73 @@ public class Container {
         }
     }
 
-    private <T> void injectIntoFields(Class<T> cls, Object instance)
+    private <T> void injectIntoFieldsAndSetter(Class<T> cls, Object instance)
             throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException,
             ReflectiveOperationException {
+
+        injectIntoFields(cls, instance);
+        injectIntoSetters(cls, instance);
+    }
+
+    private <T> void injectIntoSetters(Class<T> cls, Object instance) throws ReflectiveOperationException {
+        for(Method method : cls.getDeclaredMethods()) {
+            if (method.isAnnotationPresent(Inject.class)) {
+                method.setAccessible(true);
+                var tag = method.isAnnotationPresent(Tag.class)
+                        ? method.getAnnotation(Tag.class).value() : null;
+                var parameters = getParameters(method.getParameterTypes(), tag);
+                method.invoke(instance, parameters);
+            }
+        }
+    }
+
+    private <T> void injectIntoFields(Class<T> cls, Object instance)
+            throws IllegalAccessException, ImplementationNotFoundException, NoDefaultConstructorException,
+            ImplementationAmbiguityException {
 
         for(Field field : cls.getDeclaredFields()) {
             if (field.isAnnotationPresent(Inject.class)) {
                 field.setAccessible(true);
-                var tag = field.isAnnotationPresent(Tag.class)
-                        ? field.getAnnotation(Tag.class).value() : null;
+                var tag = getTag(field);
                 field.set(instance, instantiate(field.getType(), tag));
             }
         }
     }
 
-    private <T> T injectIntoFields(Class<T> cls)
+    private <T> T injectIntoFieldsAndSetter(Class<T> cls)
             throws ReflectiveOperationException, ImplementationNotFoundException, NoDefaultConstructorException,
             ImplementationAmbiguityException {
 
         // If an injectable class doesn't have a constructor annotated with @Inject
         // we suppose that it has a default constructor (without parameters)
         var instance = cls.getDeclaredConstructor().newInstance();
-        injectIntoFields(cls, instance);
+        injectIntoFieldsAndSetter(cls, instance);
         return instance;
     }
 
-    @SuppressWarnings("unchecked")
-    private <T> T injectIntoConstructor(Constructor<?> constructor) throws ReflectiveOperationException {
-        var parameters = Arrays.stream(constructor.getParameterTypes())
-                .map(t -> {
+    private Object[] getParameters(Class<?>[] parametersTypes, String tag) {
+        return Arrays.stream(parametersTypes)
+                .map(type -> {
                     try {
-                        var tag = constructor.isAnnotationPresent(Tag.class)
-                                ? constructor.getAnnotation(Tag.class).value() : null;
-                        return instantiate(t, tag);
-                    } catch (ImplementationNotFoundException | NoDefaultConstructorException
+                        return instantiate(type, tag);
+                    } catch(ImplementationNotFoundException | NoDefaultConstructorException
                             | ImplementationAmbiguityException e) {
                         e.printStackTrace();
                         return null;
                     }
                 })
                 .toArray();
+    }
+
+    private String getTag(AccessibleObject accessibleObject) {
+        return accessibleObject.isAnnotationPresent(Tag.class)
+                ? accessibleObject.getAnnotation(Tag.class).value() : null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T injectIntoConstructor(Constructor<?> constructor) throws ReflectiveOperationException {
+        var tag = getTag(constructor);
+        var parameters = getParameters(constructor.getParameterTypes(), tag);
         return (T)constructor.newInstance(parameters);
     }
 
