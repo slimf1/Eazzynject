@@ -106,6 +106,7 @@ public class Container {
                 .entrySet()
                 .stream()
                 .filter(item -> item.getValue().equals(baseClass))
+                .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
 
         if (implementations.isEmpty()) {
@@ -114,7 +115,7 @@ public class Container {
         }
 
         if (implementations.size() == 1) {
-            return implementations.stream().findFirst().get().getKey();
+            return implementations.stream().findFirst().get();
         }
 
         if (tag == null) {
@@ -126,7 +127,6 @@ public class Container {
 
         var validImplementations = implementations
                 .stream()
-                .map(Map.Entry::getKey)
                 .filter(implementation -> {
                     var implementationTag = implementation.isAnnotationPresent(Tag.class)
                             ? implementation.getAnnotation(Tag.class).value() : null;
