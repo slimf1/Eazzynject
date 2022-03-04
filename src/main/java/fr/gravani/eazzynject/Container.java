@@ -20,31 +20,20 @@ public class Container {
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T instantiate(Class<T> inter) {
-        Class<?> implementation = null;
-        try {
-            implementation = getImplementationFromBase(inter);
-        } catch (ImplementationNotFoundException e) {
-            e.printStackTrace();
-            return null;
-        }
+    public <T> T instantiate(Class<T> inter) throws ImplementationNotFoundException, NoDefaultConstructorException {
+        var implementation = getImplementationFromBase(inter);
 
         if (instanceCache.containsKey(implementation)) {
             return (T)instanceCache.get(implementation);
         }
 
-        Object instance = null;
-        try {
-            instance = injectIntoClass(implementation);
-            instanceCache.put(implementation, instance);
-        } catch (NoDefaultConstructorException e) {
-            e.printStackTrace();
-        }
+        var instance = injectIntoClass(implementation);
+        instanceCache.put(implementation, instance);
 
         return (T)instance;
     }
 
-    public <T> T injectIntoClass(Class<T> cls) throws NoDefaultConstructorException {
+    public <T> T injectIntoClass(Class<T> cls) throws NoDefaultConstructorException, ImplementationNotFoundException {
         try {
             var injectableConstructors = Arrays.stream(cls.getConstructors())
                     .filter(c -> c.isAnnotationPresent(Inject.class))
@@ -53,6 +42,7 @@ public class Container {
             if (!injectableConstructors.isEmpty()) {
                 return injectIntoConstructor(injectableConstructors.stream().findFirst().get());
             } else {
+                // Check ici le constructor par défaut
                 return injectIntoFields(cls);
             }
         } catch (NoSuchMethodException e) {
@@ -65,7 +55,8 @@ public class Container {
         }
     }
 
-    private <T> T injectIntoFields(Class<T> cls) throws ReflectiveOperationException {
+    private <T> T injectIntoFields(Class<T> cls)
+            throws ReflectiveOperationException, ImplementationNotFoundException, NoDefaultConstructorException {
         // Dans le cas où la classe n'a pas de constructeur avec @Inject
         // on suppose qu'elle a un constructeur par défaut rpésent
         var instance = cls.getDeclaredConstructor().newInstance();
@@ -82,8 +73,14 @@ public class Container {
     @SuppressWarnings("unchecked")
     private <T> T injectIntoConstructor(Constructor<?> constructor) throws ReflectiveOperationException {
         var parameters = Arrays.stream(constructor.getParameterTypes())
-                .map(this::instantiate)
-                //.map(t -> injectIntoClass(getImplementationFromBase(t)))
+                .map(t -> {
+                    try {
+                        return instantiate(t);
+                    } catch (ImplementationNotFoundException | NoDefaultConstructorException e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+                })
                 .toArray();
         return (T)constructor.newInstance(parameters);
     }

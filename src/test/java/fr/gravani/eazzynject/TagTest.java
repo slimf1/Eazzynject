@@ -67,7 +67,7 @@ public class TagTest {
     }
 
     @Test
-    void testTag() {
+    void testTag() throws Exception {
         container.registerMapping(AddOperator.class, Operator.class);
         container.registerMapping(SubtractOperator.class, Operator.class);
         container.registerMapping(MultiplyOperator.class, Operator.class);
