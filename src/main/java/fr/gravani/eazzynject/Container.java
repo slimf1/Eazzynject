@@ -88,8 +88,7 @@ public class Container {
         for(Method method : cls.getDeclaredMethods()) {
             if (method.isAnnotationPresent(Inject.class)) {
                 method.setAccessible(true);
-                var tag = method.isAnnotationPresent(Tag.class)
-                        ? method.getAnnotation(Tag.class).value() : null;
+                var tag = getTag(method);
                 var parameters = getParameters(method.getParameterTypes(), tag);
                 method.invoke(instance, parameters);
             }
