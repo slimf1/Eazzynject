@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 
 public class Container {
     private final Map<Class<?>, Class<?>> dependencies = new HashMap<>();
-    private final Map<Class<?>, Object> instanceCache = new HashMap<>(); // Toujours en créer des nouvelles
+    private final Map<Class<?>, Object> instanceCache = new HashMap<>(); // Use @Singleton annotation
 
     public <T> void registerMapping(Class<? extends T> child, Class<T> base) {
         dependencies.put(child, base);
@@ -27,7 +27,7 @@ public class Container {
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T instantiate(Class<T> inter, String tag)
+    private <T> T instantiate(Class<T> inter, String tag)
             throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException {
         var implementation = getImplementationFromBase(inter, tag);
 
@@ -41,7 +41,7 @@ public class Container {
         return (T)instance;
     }
 
-    public <T> T injectIntoClass(Class<T> cls)
+    private <T> T injectIntoClass(Class<T> cls)
             throws NoDefaultConstructorException, ImplementationNotFoundException, ImplementationAmbiguityException {
         try {
             var injectableConstructors = Arrays.stream(cls.getDeclaredConstructors())
@@ -51,7 +51,7 @@ public class Container {
             if (!injectableConstructors.isEmpty()) {
                 return injectIntoConstructor(injectableConstructors.stream().findFirst().get());
             } else {
-                // Check ici le constructor par défaut
+                // Verify default constructor here
                 return injectIntoFields(cls);
             }
         } catch (NoSuchMethodException e) {
@@ -60,15 +60,16 @@ public class Container {
                             "injectable constructor for the injectable class %s", cls.getName()));
         } catch (ReflectiveOperationException e) {
             e.printStackTrace();
-            return null; // TODO : faire plus?
+            return null; // TODO : do more?
         }
     }
 
     private <T> T injectIntoFields(Class<T> cls)
             throws ReflectiveOperationException, ImplementationNotFoundException, NoDefaultConstructorException,
             ImplementationAmbiguityException {
-        // Dans le cas où la classe n'a pas de constructeur avec @Inject
-        // on suppose qu'elle a un constructeur par défaut rpésent
+
+        // If a class doesn't have a constructor annotated with @Inject
+        // we suppose that it has a default constructor (without parameters)
         var instance = cls.getDeclaredConstructor().newInstance();
         for(Field field : cls.getDeclaredFields()) {
             if (field.isAnnotationPresent(Inject.class)) {
@@ -99,7 +100,6 @@ public class Container {
         return (T)constructor.newInstance(parameters);
     }
 
-    // TODO: passer par un tag
     private Class<?> getImplementationFromBase(Class<?> baseClass, String tag)
             throws ImplementationNotFoundException, ImplementationAmbiguityException {
         var implementations = dependencies
