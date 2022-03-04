@@ -48,12 +48,19 @@ public class Container {
                     .filter(c -> c.isAnnotationPresent(Inject.class))
                     .toList();
 
+            // FAIRE UN FOR EACH!! (ou si deux throw une exception ??) 2 bugs -> pas fields + constructor
+            // deux méthodes pour fields
+            T instance = null;
             if (!injectableConstructors.isEmpty()) {
-                return injectIntoConstructor(injectableConstructors.stream().findFirst().get());
-            } else {
-                // Verify default constructor here
-                return injectIntoFields(cls);
+                instance = injectIntoConstructor(injectableConstructors.stream().findFirst().get());
             }
+            if (instance == null) {
+                instance = injectIntoFields(cls);
+            } else {
+                injectIntoFields(cls, instance);
+            }
+
+            return instance;
         } catch (NoSuchMethodException e) {
             throw new NoDefaultConstructorException(
                     String.format("Could not find a default constructor or an " +
@@ -64,13 +71,10 @@ public class Container {
         }
     }
 
-    private <T> T injectIntoFields(Class<T> cls)
-            throws ReflectiveOperationException, ImplementationNotFoundException, NoDefaultConstructorException,
-            ImplementationAmbiguityException {
+    private <T> void injectIntoFields(Class<T> cls, Object instance)
+            throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException,
+            ReflectiveOperationException {
 
-        // If an injectable class doesn't have a constructor annotated with @Inject
-        // we suppose that it has a default constructor (without parameters)
-        var instance = cls.getDeclaredConstructor().newInstance();
         for(Field field : cls.getDeclaredFields()) {
             if (field.isAnnotationPresent(Inject.class)) {
                 field.setAccessible(true);
@@ -79,6 +83,16 @@ public class Container {
                 field.set(instance, instantiate(field.getType(), tag));
             }
         }
+    }
+
+    private <T> T injectIntoFields(Class<T> cls)
+            throws ReflectiveOperationException, ImplementationNotFoundException, NoDefaultConstructorException,
+            ImplementationAmbiguityException {
+
+        // If an injectable class doesn't have a constructor annotated with @Inject
+        // we suppose that it has a default constructor (without parameters)
+        var instance = cls.getDeclaredConstructor().newInstance();
+        injectIntoFields(cls, instance);
         return instance;
     }
 

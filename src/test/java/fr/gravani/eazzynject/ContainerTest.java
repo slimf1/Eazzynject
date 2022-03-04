@@ -28,7 +28,11 @@ public class ContainerTest {
 
     @Injectable
     static class RssNewsService implements NewsService {
+
         private final HttpService httpService;
+
+        @Inject
+        private MyUselessService myUselessService;
 
         @Inject
         public RssNewsService(HttpService httpService) {
@@ -38,6 +42,11 @@ public class ContainerTest {
         @Override
         public HttpService getHttpService() {
             return httpService;
+        }
+
+        @Override
+        public String toString() {
+            return "RssNewsService: "+ myUselessService.getValue();
         }
     }
 
@@ -67,5 +76,6 @@ public class ContainerTest {
         var newsService = container.instantiate(NewsService.class);
         assertTrue(newsService.getHttpService() instanceof DarkWebHttpService);
         assertEquals(newsService.getHttpService().getString(), "hi useless");
+        assertEquals(newsService.toString(), "RssNewsService: useless");
     }
 }
