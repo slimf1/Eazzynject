@@ -1,6 +1,8 @@
 package fr.gravani.eazzynject;
 
 import fr.gravani.eazzynject.annotations.Inject;
+import fr.gravani.eazzynject.annotations.Tag;
+import fr.gravani.eazzynject.exceptions.ImplementationAmbiguityException;
 import fr.gravani.eazzynject.exceptions.ImplementationNotFoundException;
 import fr.gravani.eazzynject.exceptions.NoDefaultConstructorException;
 
@@ -19,9 +21,15 @@ public class Container {
         dependencies.put(child, base);
     }
 
+    public <T> T instantiate(Class<T> inter)
+            throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException {
+        return instantiate(inter, null);
+    }
+
     @SuppressWarnings("unchecked")
-    public <T> T instantiate(Class<T> inter) throws ImplementationNotFoundException, NoDefaultConstructorException {
-        var implementation = getImplementationFromBase(inter);
+    public <T> T instantiate(Class<T> inter, String tag)
+            throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException {
+        var implementation = getImplementationFromBase(inter, tag);
 
         if (instanceCache.containsKey(implementation)) {
             return (T)instanceCache.get(implementation);
@@ -33,7 +41,8 @@ public class Container {
         return (T)instance;
     }
 
-    public <T> T injectIntoClass(Class<T> cls) throws NoDefaultConstructorException, ImplementationNotFoundException {
+    public <T> T injectIntoClass(Class<T> cls)
+            throws NoDefaultConstructorException, ImplementationNotFoundException, ImplementationAmbiguityException {
         try {
             var injectableConstructors = Arrays.stream(cls.getConstructors())
                     .filter(c -> c.isAnnotationPresent(Inject.class))
@@ -56,15 +65,17 @@ public class Container {
     }
 
     private <T> T injectIntoFields(Class<T> cls)
-            throws ReflectiveOperationException, ImplementationNotFoundException, NoDefaultConstructorException {
+            throws ReflectiveOperationException, ImplementationNotFoundException, NoDefaultConstructorException,
+            ImplementationAmbiguityException {
         // Dans le cas où la classe n'a pas de constructeur avec @Inject
         // on suppose qu'elle a un constructeur par défaut rpésent
         var instance = cls.getDeclaredConstructor().newInstance();
         for(Field field : cls.getDeclaredFields()) {
             if (field.isAnnotationPresent(Inject.class)) {
                 field.setAccessible(true);
-                //field.set(instance, injectIntoClass(getImplementationFromBase(field.getType())));
-                field.set(instance, instantiate(field.getType()));
+                var tag = field.isAnnotationPresent(Tag.class)
+                        ? field.getAnnotation(Tag.class).value() : null;
+                field.set(instance, instantiate(field.getType(), tag));
             }
         }
         return instance;
@@ -75,8 +86,11 @@ public class Container {
         var parameters = Arrays.stream(constructor.getParameterTypes())
                 .map(t -> {
                     try {
-                        return instantiate(t);
-                    } catch (ImplementationNotFoundException | NoDefaultConstructorException e) {
+                        var tag = constructor.isAnnotationPresent(Tag.class)
+                                ? constructor.getAnnotation(Tag.class).value() : null;
+                        return instantiate(t, tag);
+                    } catch (ImplementationNotFoundException | NoDefaultConstructorException
+                            | ImplementationAmbiguityException e) {
                         e.printStackTrace();
                         return null;
                     }
@@ -86,7 +100,8 @@ public class Container {
     }
 
     // TODO: passer par un tag
-    private Class<?> getImplementationFromBase(Class<?> baseClass) throws ImplementationNotFoundException {
+    private Class<?> getImplementationFromBase(Class<?> baseClass, String tag)
+            throws ImplementationNotFoundException, ImplementationAmbiguityException {
         var implementations = dependencies
                 .entrySet()
                 .stream()
@@ -102,9 +117,37 @@ public class Container {
             return implementations.stream().findFirst().get().getKey();
         }
 
-        // Là gérer le tag: cf
+        if (tag == null) {
+            throw new ImplementationAmbiguityException(
+                    String.format(
+                            "Tag not found even though found %d different implementations for base type %s",
+                            implementations.size(), baseClass.getName()));
+        }
+
+        var validImplementations = implementations
+                .stream()
+                .map(Map.Entry::getKey)
+                .filter(implementation -> {
+                    var implementationTag = implementation.isAnnotationPresent(Tag.class)
+                            ? implementation.getAnnotation(Tag.class).value() : null;
+                    if (implementationTag != null) {
+                        return implementationTag.equals(tag);
+                    }
+                    return false;
+                })
+                .toList();
+
+        if (validImplementations.isEmpty()) {
+            throw new ImplementationNotFoundException(
+                    String.format("Could not find any valid implementation for type %s", baseClass.getName()));
+        } else if (validImplementations.size() >= 2) {
+            throw new ImplementationAmbiguityException(
+                    String.format("Found %s conflicting tags for type %s",
+                            validImplementations.size(), baseClass.getName()));
+        } else {
+            return validImplementations.stream().findFirst().get();
+        }
         // https://dev.to/jjbrt/how-to-create-your-own-dependency-injection-framework-in-java-4eaj
         // Le mettre dans le cr/readme
-        return implementations.stream().findFirst().get().getKey();
     }
 }

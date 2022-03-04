@@ -74,7 +74,7 @@ public class TagTest {
         container.registerMapping(Calculator.class, Calculator.class);
 
         var calculator = container.instantiate(Calculator.class);
-        //assertEquals(calculator.operation(51, 39), 1080);
-        assertEquals(1, 1);
+        assertEquals(calculator.operation(51, 39), 1080);
+        assertEquals(calculator.operation(19, -9), 280);
     }
 }
