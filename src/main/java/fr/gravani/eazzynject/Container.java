@@ -44,7 +44,7 @@ public class Container {
     public <T> T injectIntoClass(Class<T> cls)
             throws NoDefaultConstructorException, ImplementationNotFoundException, ImplementationAmbiguityException {
         try {
-            var injectableConstructors = Arrays.stream(cls.getConstructors())
+            var injectableConstructors = Arrays.stream(cls.getDeclaredConstructors())
                     .filter(c -> c.isAnnotationPresent(Inject.class))
                     .toList();
 
