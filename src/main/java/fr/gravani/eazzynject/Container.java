@@ -68,7 +68,7 @@ public class Container {
             throws ReflectiveOperationException, ImplementationNotFoundException, NoDefaultConstructorException,
             ImplementationAmbiguityException {
 
-        // If a class doesn't have a constructor annotated with @Inject
+        // If an injectable class doesn't have a constructor annotated with @Inject
         // we suppose that it has a default constructor (without parameters)
         var instance = cls.getDeclaredConstructor().newInstance();
         for(Field field : cls.getDeclaredFields()) {
