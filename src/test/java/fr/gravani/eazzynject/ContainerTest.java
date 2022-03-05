@@ -149,10 +149,4 @@ public class ContainerTest {
         assertThrows(NoDefaultConstructorException.class,
                 () -> container.instantiate(EpicService.class));
     }
-
-    @Test
-    void testPackageScanner() throws Exception {
-        Container.initContainer("fr.gravani.eazzynject");
-        assertTrue(Container.dependencies.size() > 0);
-    }
 }
