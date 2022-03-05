@@ -1,10 +1,7 @@
 package fr.gravani.eazzynject;
 
 import fr.gravani.eazzynject.annotations.Injectable;
-import fr.gravani.eazzynject.exceptions.ClassLoaderNotFoundException;
-import fr.gravani.eazzynject.exceptions.ImplementationAmbiguityException;
-import fr.gravani.eazzynject.exceptions.ImplementationNotFoundException;
-import fr.gravani.eazzynject.exceptions.NoDefaultConstructorException;
+import fr.gravani.eazzynject.exceptions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,7 +27,8 @@ public class Scanner {
     }
 
     public static <T> T getInstance(Class<T> type)
-            throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException {
+            throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException,
+            CyclicDependenciesException {
         return CONTAINER.instantiate(type);
     }
 

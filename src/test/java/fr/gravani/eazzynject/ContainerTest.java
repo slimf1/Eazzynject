@@ -2,6 +2,7 @@ package fr.gravani.eazzynject;
 
 import fr.gravani.eazzynject.annotations.Inject;
 import fr.gravani.eazzynject.annotations.Injectable;
+import fr.gravani.eazzynject.exceptions.CyclicDependenciesException;
 import fr.gravani.eazzynject.exceptions.ImplementationNotFoundException;
 import fr.gravani.eazzynject.exceptions.NoDefaultConstructorException;
 import lombok.Getter;
@@ -114,6 +115,24 @@ public class ContainerTest {
         }
     }
 
+    @Injectable // TODO: enlever les injectable des classes de test qui n'en ont pas besoin
+    static class CycleA {
+        @Inject
+        private CycleB cycleB;
+    }
+
+    @Injectable
+    static class CycleB {
+        @Inject
+        private CycleC cycleC;
+    }
+
+    @Injectable
+    static class CycleC {
+        @Inject
+        private CycleA cycleA;
+    }
+
     @BeforeEach
     void setUpContainer() {
         container = new Container();
@@ -148,5 +167,18 @@ public class ContainerTest {
 
         assertThrows(NoDefaultConstructorException.class,
                 () -> container.instantiate(EpicService.class));
+    }
+
+    @Test
+    void testCircularDependencies() {
+        container.registerMapping(CycleA.class, CycleA.class);
+        container.registerMapping(CycleB.class, CycleB.class);
+        container.registerMapping(CycleC.class, CycleC.class);
+
+        var exception = assertThrows(CyclicDependenciesException.class,
+                () -> container.instantiate(CycleA.class));
+        assertTrue(exception.getMessage().contains("CycleA"));
+        assertTrue(exception.getMessage().contains("CycleB"));
+        assertTrue(exception.getMessage().contains("CycleC"));
     }
 }

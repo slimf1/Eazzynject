@@ -2,6 +2,7 @@ package fr.gravani.eazzynject;
 
 import fr.gravani.eazzynject.annotations.Inject;
 import fr.gravani.eazzynject.annotations.Tag;
+import fr.gravani.eazzynject.exceptions.CyclicDependenciesException;
 import fr.gravani.eazzynject.exceptions.ImplementationAmbiguityException;
 import fr.gravani.eazzynject.exceptions.ImplementationNotFoundException;
 import fr.gravani.eazzynject.exceptions.NoDefaultConstructorException;
@@ -17,9 +18,12 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class Container {
+    private static final int MAX_RECURSIVE_INJECTIONS = 32;
+
     //*** Class attributes
     private final Map<Class<?>, Class<?>> dependencies = new HashMap<>();
     private final Map<Class<?>, Object> instanceCache = new HashMap<>(); // Use @Singleton annotation
+    private final Map<Class<?>, Integer> injectionCounter = new HashMap<>();
 
     //*** Instances methods
     public void registerMapping(Class<?> child, Class<?> base) {
@@ -27,15 +31,36 @@ public class Container {
     }
 
     public <T> T instantiate(Class<T> inter)
-            throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException {
+            throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException,
+            CyclicDependenciesException {
+        injectionCounter.clear();
         return instantiate(inter, null);
     }
 
     @SuppressWarnings("unchecked")
     private <T> T instantiate(Class<T> inter, String tag)
-            throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException {
+            throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException,
+            CyclicDependenciesException {
 
         var implementation = getImplementationFromBase(inter, tag);
+        if (injectionCounter.containsKey(implementation)) {
+            injectionCounter.put(implementation, injectionCounter.get(implementation) + 1);
+        } else {
+            injectionCounter.put(implementation, 1);
+        }
+
+        if (injectionCounter.get(implementation) > MAX_RECURSIVE_INJECTIONS) {
+            var classesInCycle = injectionCounter
+                    .entrySet()
+                    .stream()
+                    .filter(entry -> entry.getValue() >= MAX_RECURSIVE_INJECTIONS - 1)
+                    .map(entry -> entry.getKey().getName())
+                    .sorted()
+                    .toList();
+            throw new CyclicDependenciesException(
+                    String.format("Found circular dependencies with classes: %s",
+                            String.join(",", classesInCycle)));
+        }
 
         if (instanceCache.containsKey(implementation)) {
             return (T)instanceCache.get(implementation);
@@ -48,7 +73,8 @@ public class Container {
     }
 
     private <T> T injectIntoClass(Class<T> cls)
-            throws NoDefaultConstructorException, ImplementationNotFoundException, ImplementationAmbiguityException {
+            throws NoDefaultConstructorException, ImplementationNotFoundException, ImplementationAmbiguityException,
+            CyclicDependenciesException {
 
         try {
             var injectableConstructors = Arrays.stream(cls.getDeclaredConstructors())
@@ -79,7 +105,7 @@ public class Container {
 
     private <T> void injectIntoFieldsAndSetter(Class<T> cls, Object instance)
             throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException,
-            ReflectiveOperationException {
+            ReflectiveOperationException, CyclicDependenciesException {
 
         injectIntoFields(cls, instance);
         injectIntoSetters(cls, instance);
@@ -87,7 +113,7 @@ public class Container {
 
     private <T> void injectIntoSetters(Class<T> cls, Object instance)
             throws ReflectiveOperationException, ImplementationNotFoundException, NoDefaultConstructorException,
-            ImplementationAmbiguityException {
+            ImplementationAmbiguityException, CyclicDependenciesException {
 
         for(Method method : cls.getDeclaredMethods()) {
             if (method.isAnnotationPresent(Inject.class)) {
@@ -101,7 +127,7 @@ public class Container {
 
     private <T> void injectIntoFields(Class<T> cls, Object instance)
             throws IllegalAccessException, ImplementationNotFoundException, NoDefaultConstructorException,
-            ImplementationAmbiguityException {
+            ImplementationAmbiguityException, CyclicDependenciesException {
 
         for(Field field : cls.getDeclaredFields()) {
             if (field.isAnnotationPresent(Inject.class)) {
@@ -114,7 +140,7 @@ public class Container {
 
     private <T> T injectIntoFieldsAndSetter(Class<T> cls)
             throws ReflectiveOperationException, ImplementationNotFoundException, NoDefaultConstructorException,
-            ImplementationAmbiguityException {
+            ImplementationAmbiguityException, CyclicDependenciesException {
 
         // If an injectable class doesn't have a constructor annotated with @Inject
         // we suppose that it has a default constructor (without parameters)
@@ -124,7 +150,7 @@ public class Container {
     }
 
     private Object[] getParameters(Class<?>[] parametersTypes, String tag)
-            throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException {
+            throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException, CyclicDependenciesException {
 
         var parameters = new ArrayList<>();
         for(var type : parametersTypes) {
@@ -141,7 +167,7 @@ public class Container {
     @SuppressWarnings("unchecked")
     private <T> T injectIntoConstructor(Constructor<?> constructor)
             throws ReflectiveOperationException, ImplementationNotFoundException, NoDefaultConstructorException,
-            ImplementationAmbiguityException {
+            ImplementationAmbiguityException, CyclicDependenciesException {
 
         var tag = getTag(constructor);
         var parameters = getParameters(constructor.getParameterTypes(), tag);
