@@ -6,7 +6,8 @@ import java.lang.annotation.Target;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-@Target({ CONSTRUCTOR, FIELD, METHOD })
+@Target({ FIELD, METHOD, TYPE, CONSTRUCTOR })
 @Retention(RUNTIME)
-public @interface Inject {
+public @interface Tag {
+    String value() default "";
 }
