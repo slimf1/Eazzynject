@@ -2,8 +2,7 @@ package fr.gravani.eazzynject;
 
 import fr.gravani.eazzynject.annotations.Inject;
 import fr.gravani.eazzynject.annotations.Injectable;
-import fr.gravani.eazzynject.exceptions.ImplementationNotFoundException;
-import fr.gravani.eazzynject.exceptions.NoDefaultConstructorException;
+import fr.gravani.eazzynject.exceptions.*;
 import lombok.Getter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -114,6 +113,24 @@ public class ContainerTest {
         }
     }
 
+    @Injectable // TODO: enlever les injectable des classes de test qui n'en ont pas besoin
+    static class CycleA {
+        @Inject
+        private CycleB cycleB;
+    }
+
+    @Injectable
+    static class CycleB {
+        @Inject
+        private CycleC cycleC;
+    }
+
+    @Injectable
+    static class CycleC {
+        @Inject
+        private CycleA cycleA;
+    }
+
     @BeforeEach
     void setUpContainer() {
         container = new Container();
@@ -135,7 +152,7 @@ public class ContainerTest {
     }
 
     @Test
-    void testTypeWithoutImplementation() {
+    void testTypeWithoutImplementation() throws ImplementationAmbiguityException {
         container.registerMapping(MyService.class, MyService.class);
 
         assertThrows(ImplementationNotFoundException.class,
@@ -143,10 +160,23 @@ public class ContainerTest {
     }
 
     @Test
-    void testInjectableWithoutInjectableDefaultConstructor() {
+    void testInjectableWithoutInjectableDefaultConstructor() throws ImplementationAmbiguityException {
         container.registerMapping(EpicService.class, EpicService.class);
 
         assertThrows(NoDefaultConstructorException.class,
                 () -> container.instantiate(EpicService.class));
+    }
+
+    @Test
+    void testCircularDependencies() throws ImplementationAmbiguityException {
+        container.registerMapping(CycleA.class, CycleA.class);
+        container.registerMapping(CycleB.class, CycleB.class);
+        container.registerMapping(CycleC.class, CycleC.class);
+
+        var exception = assertThrows(CyclicDependenciesException.class,
+                () -> container.instantiate(CycleA.class));
+        assertTrue(exception.getMessage().contains("CycleA"));
+        assertTrue(exception.getMessage().contains("CycleB"));
+        assertTrue(exception.getMessage().contains("CycleC"));
     }
 }
