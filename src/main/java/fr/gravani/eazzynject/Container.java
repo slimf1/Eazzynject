@@ -2,14 +2,19 @@ package fr.gravani.eazzynject;
 
 import fr.gravani.eazzynject.annotations.Inject;
 import fr.gravani.eazzynject.annotations.Tag;
-import fr.gravani.eazzynject.exceptions.*;
+import fr.gravani.eazzynject.exceptions.CyclicDependenciesException;
+import fr.gravani.eazzynject.exceptions.ImplementationAmbiguityException;
+import fr.gravani.eazzynject.exceptions.ImplementationNotFoundException;
+import fr.gravani.eazzynject.exceptions.NoDefaultConstructorException;
 
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Container {
     private static final int MAX_RECURSIVE_INJECTIONS = 32;
@@ -173,9 +178,7 @@ public class Container {
     private Class<?> getImplementationFromBase(Class<?> baseClass, String tag)
             throws ImplementationNotFoundException, ImplementationAmbiguityException {
 
-        Class<?> implementation = dependencies.findImplementationFromBaseClass(baseClass, tag);
-
-        return implementation;
+        return dependencies.findImplementationFromBaseClass(baseClass, tag);
 
         // https://dev.to/jjbrt/how-to-create-your-own-dependency-injection-framework-in-java-4eaj
         // Le mettre dans le cr/readme

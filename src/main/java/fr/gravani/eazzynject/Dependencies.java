@@ -2,14 +2,12 @@ package fr.gravani.eazzynject;
 
 import fr.gravani.eazzynject.exceptions.ImplementationAmbiguityException;
 import fr.gravani.eazzynject.exceptions.ImplementationNotFoundException;
-import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class Dependencies {
-    @Getter
-    private List<ImplementationsLink> dependencies;
+    private final List<ImplementationsLink> dependencies;
 
     public Dependencies() {
         dependencies = new ArrayList<>();
