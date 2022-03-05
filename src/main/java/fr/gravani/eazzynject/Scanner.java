@@ -37,6 +37,12 @@ public class Scanner {
         return CONTAINER.instantiate(type);
     }
 
+    public static <T> T getInstance(Class<T> type, String tag)
+            throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException,
+            CyclicDependenciesException {
+        return CONTAINER.instantiate(type, tag);
+    }
+
     private static void registerSuperclassesInterfaces(Class<?> implementationClass, Class<?> superClass) throws ImplementationAmbiguityException {
         Class<?> cSuperClass = superClass.getSuperclass();
         Class<?>[] interfaces = superClass.getInterfaces();
