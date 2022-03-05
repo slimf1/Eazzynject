@@ -4,6 +4,7 @@ import fr.gravani.eazzynject.annotations.Inject;
 import fr.gravani.eazzynject.annotations.Injectable;
 import fr.gravani.eazzynject.annotations.Tag;
 import fr.gravani.eazzynject.exceptions.ImplementationAmbiguityException;
+import fr.gravani.eazzynject.exceptions.ImplementationNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -83,6 +84,39 @@ public class TagTest {
         }
     }
 
+    interface Bank {
+        String getName();
+    }
+
+    @Injectable
+    static class CreditAgricool implements Bank {
+        @Override
+        public String getName() {
+            return "Credit Agricool";
+        }
+    }
+
+    @Injectable
+    static class FortuneBank implements Bank {
+        @Override
+        public String getName() {
+            return "Fortune Bank";
+        }
+    }
+
+    @Injectable
+    static class MyAccount {
+        @Inject
+        private Bank bank;
+    }
+
+    @Injectable
+    static class MyCalculator {
+        @Inject
+        @Tag("average")
+        private Operator averageOperator;
+    }
+
     @BeforeEach
     void setUpContainer() {
         container = new Container();
@@ -108,5 +142,26 @@ public class TagTest {
 
         assertThrows(ImplementationAmbiguityException.class,
                 () -> container.instantiate(AdditionCalculator.class));
+    }
+
+    @Test
+    void testAmbiguousImplementationWithoutTag() {
+        container.registerMapping(CreditAgricool.class, Bank.class);
+        container.registerMapping(FortuneBank.class, Bank.class);
+        container.registerMapping(MyAccount.class, MyAccount.class);
+
+        assertThrows(ImplementationAmbiguityException.class,
+                () -> container.instantiate(MyAccount.class));
+    }
+
+    @Test
+    void testNonExistingTag() {
+        container.registerMapping(AddOperator.class, Operator.class);
+        container.registerMapping(SubtractOperator.class, Operator.class);
+        container.registerMapping(MultiplyOperator.class, Operator.class);
+        container.registerMapping(MyCalculator.class, MyCalculator.class);
+
+        assertThrows(ImplementationNotFoundException.class,
+                () -> container.instantiate(MyCalculator.class));
     }
 }

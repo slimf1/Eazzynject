@@ -2,12 +2,13 @@ package fr.gravani.eazzynject;
 
 import fr.gravani.eazzynject.annotations.Inject;
 import fr.gravani.eazzynject.annotations.Injectable;
+import fr.gravani.eazzynject.exceptions.ImplementationNotFoundException;
+import fr.gravani.eazzynject.exceptions.NoDefaultConstructorException;
 import lombok.Getter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ContainerTest {
     Container container;
@@ -88,6 +89,31 @@ public class ContainerTest {
         }
     }
 
+    interface UnimplementedInterface {
+        void method();
+    }
+
+    @Injectable
+    static class MyService {
+        @Getter
+        private final UnimplementedInterface unimplementedInterface;
+
+        @Inject
+        public MyService(UnimplementedInterface unimplementedInterface) {
+            this.unimplementedInterface = unimplementedInterface;
+        }
+    }
+
+    @Injectable
+    static class EpicService {
+        @Getter
+        private final String name;
+
+        public EpicService(String name) {
+            this.name = name;
+        }
+    }
+
     @BeforeEach
     void setUpContainer() {
         container = new Container();
@@ -106,5 +132,21 @@ public class ContainerTest {
         assertTrue(newsService.getHttpService() instanceof DarkWebHttpService);
         assertEquals(newsService.getHttpService().getString(), "hi useless super useless other useless");
         assertEquals(newsService.toString(), "RssNewsService: useless super useless");
+    }
+
+    @Test
+    void testTypeWithoutImplementation() {
+        container.registerMapping(MyService.class, MyService.class);
+
+        assertThrows(ImplementationNotFoundException.class,
+                () -> container.instantiate(MyService.class));
+    }
+
+    @Test
+    void testInjectableWithoutInjectableDefaultConstructor() {
+        container.registerMapping(EpicService.class, EpicService.class);
+
+        assertThrows(NoDefaultConstructorException.class,
+                () -> container.instantiate(EpicService.class));
     }
 }

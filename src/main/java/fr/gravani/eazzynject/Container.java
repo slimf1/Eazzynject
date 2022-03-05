@@ -10,6 +10,7 @@ import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -52,8 +53,6 @@ public class Container {
                     .filter(c -> c.isAnnotationPresent(Inject.class))
                     .toList();
 
-            // FAIRE UN FOR EACH!! (ou si deux throw une exception ??) 2 bugs -> pas fields + constructor
-            // deux méthodes pour fields
             T instance = null;
             if (!injectableConstructors.isEmpty()) {
                 instance = injectIntoConstructor(injectableConstructors.stream().findFirst().get());
@@ -84,7 +83,10 @@ public class Container {
         injectIntoSetters(cls, instance);
     }
 
-    private <T> void injectIntoSetters(Class<T> cls, Object instance) throws ReflectiveOperationException {
+    private <T> void injectIntoSetters(Class<T> cls, Object instance)
+            throws ReflectiveOperationException, ImplementationNotFoundException, NoDefaultConstructorException,
+            ImplementationAmbiguityException {
+
         for(Method method : cls.getDeclaredMethods()) {
             if (method.isAnnotationPresent(Inject.class)) {
                 method.setAccessible(true);
@@ -119,18 +121,14 @@ public class Container {
         return instance;
     }
 
-    private Object[] getParameters(Class<?>[] parametersTypes, String tag) {
-        return Arrays.stream(parametersTypes)
-                .map(type -> {
-                    try {
-                        return instantiate(type, tag);
-                    } catch(ImplementationNotFoundException | NoDefaultConstructorException
-                            | ImplementationAmbiguityException e) {
-                        e.printStackTrace();
-                        return null;
-                    }
-                })
-                .toArray();
+    private Object[] getParameters(Class<?>[] parametersTypes, String tag)
+            throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException {
+
+        var parameters = new ArrayList<>();
+        for(var type : parametersTypes) {
+            parameters.add(instantiate(type, tag));
+        }
+        return parameters.toArray();
     }
 
     private String getTag(AccessibleObject accessibleObject) {
@@ -139,7 +137,10 @@ public class Container {
     }
 
     @SuppressWarnings("unchecked")
-    private <T> T injectIntoConstructor(Constructor<?> constructor) throws ReflectiveOperationException {
+    private <T> T injectIntoConstructor(Constructor<?> constructor)
+            throws ReflectiveOperationException, ImplementationNotFoundException, NoDefaultConstructorException,
+            ImplementationAmbiguityException {
+
         var tag = getTag(constructor);
         var parameters = getParameters(constructor.getParameterTypes(), tag);
         return (T)constructor.newInstance(parameters);
@@ -156,7 +157,7 @@ public class Container {
 
         if (implementations.isEmpty()) {
             throw new ImplementationNotFoundException(
-                    String.format("Could not find any implementation for base class %s", baseClass.getName()));
+                    String.format("Could not find any implementation for base type %s", baseClass.getName()));
         }
 
         if (implementations.size() == 1) {
