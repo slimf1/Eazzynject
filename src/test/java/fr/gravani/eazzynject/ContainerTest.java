@@ -2,9 +2,7 @@ package fr.gravani.eazzynject;
 
 import fr.gravani.eazzynject.annotations.Inject;
 import fr.gravani.eazzynject.annotations.Injectable;
-import fr.gravani.eazzynject.exceptions.CyclicDependenciesException;
-import fr.gravani.eazzynject.exceptions.ImplementationNotFoundException;
-import fr.gravani.eazzynject.exceptions.NoDefaultConstructorException;
+import fr.gravani.eazzynject.exceptions.*;
 import lombok.Getter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -154,7 +152,7 @@ public class ContainerTest {
     }
 
     @Test
-    void testTypeWithoutImplementation() {
+    void testTypeWithoutImplementation() throws ImplementationAmbiguityException {
         container.registerMapping(MyService.class, MyService.class);
 
         assertThrows(ImplementationNotFoundException.class,
@@ -162,7 +160,7 @@ public class ContainerTest {
     }
 
     @Test
-    void testInjectableWithoutInjectableDefaultConstructor() {
+    void testInjectableWithoutInjectableDefaultConstructor() throws ImplementationAmbiguityException {
         container.registerMapping(EpicService.class, EpicService.class);
 
         assertThrows(NoDefaultConstructorException.class,
@@ -170,7 +168,7 @@ public class ContainerTest {
     }
 
     @Test
-    void testCircularDependencies() {
+    void testCircularDependencies() throws ImplementationAmbiguityException {
         container.registerMapping(CycleA.class, CycleA.class);
         container.registerMapping(CycleB.class, CycleB.class);
         container.registerMapping(CycleC.class, CycleC.class);

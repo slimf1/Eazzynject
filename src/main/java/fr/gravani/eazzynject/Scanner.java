@@ -17,13 +17,18 @@ public class Scanner {
 
     //*** Static methods
     public static void initContainer(String packageName)
-            throws ClassLoaderNotFoundException, IOException, ClassNotFoundException {
+            throws ClassLoaderNotFoundException, IOException, ClassNotFoundException, ImplementationAmbiguityException {
         List<Class<?>> allClassesInPackage = getClasses(packageName);
-        allClassesInPackage
+        var injectableClasses =  allClassesInPackage
                 .stream()
                 .filter(c -> c.isAnnotationPresent(Injectable.class)
                         && !c.isInterface() && !Modifier.isAbstract(c.getModifiers()))
-                .forEach(c -> registerSuperclassesInterfaces(c, c));
+                .toList();
+
+        for(var injectableClass : injectableClasses) {
+            CONTAINER.registerMapping(injectableClass, injectableClass);
+            registerSuperclassesInterfaces(injectableClass, injectableClass);
+        }
     }
 
     public static <T> T getInstance(Class<T> type)
@@ -32,29 +37,20 @@ public class Scanner {
         return CONTAINER.instantiate(type);
     }
 
-    private static void registerSuperclassesInterfaces(Class<?> implementationClass, Class<?> superClass) {
+    private static void registerSuperclassesInterfaces(Class<?> implementationClass, Class<?> superClass) throws ImplementationAmbiguityException {
         Class<?> cSuperClass = superClass.getSuperclass();
         Class<?>[] interfaces = superClass.getInterfaces();
 
-        if((cSuperClass == Object.class || cSuperClass == null) && interfaces.length == 0) {
-            //*** No superclass and implements no interface
-            CONTAINER.registerMapping(implementationClass, implementationClass);
+        //*** Registering superclass
+        if(cSuperClass != Object.class && cSuperClass != null) {
+            CONTAINER.registerMapping(implementationClass, cSuperClass);
+            registerSuperclassesInterfaces(implementationClass, cSuperClass);
         }
-        else {
-            //*** Registering superclass
-            if(cSuperClass != Object.class && cSuperClass != null) {
-                CONTAINER.registerMapping(implementationClass, cSuperClass);
-                registerSuperclassesInterfaces(implementationClass, cSuperClass);
-            }
-
-            //*** Registering interfaces
-            for(Class<?> curInterface : interfaces) {
-                CONTAINER.registerMapping(implementationClass, curInterface);
-                registerSuperclassesInterfaces(implementationClass, curInterface);
-            }
+        //*** Registering interfaces
+        for(Class<?> curInterface : interfaces) {
+            CONTAINER.registerMapping(implementationClass, curInterface);
+            registerSuperclassesInterfaces(implementationClass, curInterface);
         }
-
-
     }
 
     private static List<Class<?>> getClasses(String packageName)

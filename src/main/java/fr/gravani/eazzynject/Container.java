@@ -2,32 +2,28 @@ package fr.gravani.eazzynject;
 
 import fr.gravani.eazzynject.annotations.Inject;
 import fr.gravani.eazzynject.annotations.Tag;
-import fr.gravani.eazzynject.exceptions.CyclicDependenciesException;
-import fr.gravani.eazzynject.exceptions.ImplementationAmbiguityException;
-import fr.gravani.eazzynject.exceptions.ImplementationNotFoundException;
-import fr.gravani.eazzynject.exceptions.NoDefaultConstructorException;
+import fr.gravani.eazzynject.exceptions.*;
 
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class Container {
     private static final int MAX_RECURSIVE_INJECTIONS = 32;
 
     //*** Class attributes
-    private final Map<Class<?>, Class<?>> dependencies = new HashMap<>();
+    private final Dependencies dependencies = new Dependencies();
     private final Map<Class<?>, Object> instanceCache = new HashMap<>(); // Use @Singleton annotation
     private final Map<Class<?>, Integer> injectionCounter = new HashMap<>();
 
     //*** Instances methods
-    public void registerMapping(Class<?> child, Class<?> base) {
-        dependencies.put(child, base);
+    public void registerMapping(Class<?> child, Class<?> base) throws ImplementationAmbiguityException {
+        String tag = child.isAnnotationPresent(Tag.class)
+                ? child.getAnnotation(Tag.class).value() : null;
+        dependencies.put(base, child, tag);
     }
 
     public <T> T instantiate(Class<T> inter)
@@ -176,51 +172,11 @@ public class Container {
 
     private Class<?> getImplementationFromBase(Class<?> baseClass, String tag)
             throws ImplementationNotFoundException, ImplementationAmbiguityException {
-        var implementations = dependencies
-                .entrySet()
-                .stream()
-                .filter(item -> item.getValue().equals(baseClass))
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toSet());
 
-        if (implementations.isEmpty()) {
-            throw new ImplementationNotFoundException(
-                    String.format("Could not find any implementation for base type %s", baseClass.getName()));
-        }
+        Class<?> implementation = dependencies.findImplementationFromBaseClass(baseClass, tag);
 
-        if (implementations.size() == 1) {
-            return implementations.stream().findFirst().get();
-        }
+        return implementation;
 
-        if (tag == null) {
-            throw new ImplementationAmbiguityException(
-                    String.format(
-                            "Tag not found even though found %d different implementations for base type %s",
-                            implementations.size(), baseClass.getName()));
-        }
-
-        var validImplementations = implementations
-                .stream()
-                .filter(implementation -> {
-                    var implementationTag = implementation.isAnnotationPresent(Tag.class)
-                            ? implementation.getAnnotation(Tag.class).value() : null;
-                    if (implementationTag != null) {
-                        return implementationTag.equals(tag);
-                    }
-                    return false;
-                })
-                .toList();
-
-        if (validImplementations.isEmpty()) {
-            throw new ImplementationNotFoundException(
-                    String.format("Could not find any valid implementation for type %s", baseClass.getName()));
-        } else if (validImplementations.size() >= 2) {
-            throw new ImplementationAmbiguityException(
-                    String.format("Found %s conflicting tags for type %s",
-                            validImplementations.size(), baseClass.getName()));
-        } else {
-            return validImplementations.stream().findFirst().get();
-        }
         // https://dev.to/jjbrt/how-to-create-your-own-dependency-injection-framework-in-java-4eaj
         // Le mettre dans le cr/readme
     }
