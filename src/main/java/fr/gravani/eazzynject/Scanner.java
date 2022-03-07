@@ -40,10 +40,11 @@ public class Scanner {
     public static <T> T getInstance(Class<T> type, String tag)
             throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException,
             CyclicDependenciesException {
-        return CONTAINER.instantiate(type, tag);
+        return CONTAINER.instantiateByTag(type, tag);
     }
 
-    private static void registerSuperclassesInterfaces(Class<?> implementationClass, Class<?> superClass) throws ImplementationAmbiguityException {
+    private static void registerSuperclassesInterfaces(Class<?> implementationClass, Class<?> superClass)
+            throws ImplementationAmbiguityException {
         Class<?> cSuperClass = superClass.getSuperclass();
         Class<?>[] interfaces = superClass.getInterfaces();
 
@@ -92,7 +93,8 @@ public class Scanner {
                     assert !file.getName().contains(".");
                     classes.addAll(findClasses(file, packageName + "." + file.getName()));
                 } else if (file.getName().endsWith(".class")) {
-                    classes.add(Class.forName(packageName + '.' + file.getName().substring(0, file.getName().length() - 6)));
+                    classes.add(Class.forName(
+                            packageName + '.' + file.getName().substring(0, file.getName().length() - 6)));
                 }
             }
         }

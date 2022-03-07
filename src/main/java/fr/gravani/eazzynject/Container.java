@@ -31,15 +31,21 @@ public class Container {
         dependencies.put(base, child, tag);
     }
 
-    public <T> T instantiate(Class<T> inter)
+    public <T> T instantiate(Class<T> type)
+            throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException,
+            CyclicDependenciesException {
+        return instantiate(type, null);
+    }
+
+    public <T> T instantiate(Class<T> type, String tag)
             throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException,
             CyclicDependenciesException {
         injectionCounter.clear();
-        return instantiate(inter, null);
+        return instantiateByTag(type, tag);
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T instantiate(Class<T> inter, String tag)
+    public <T> T instantiateByTag(Class<T> inter, String tag)
             throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException,
             CyclicDependenciesException {
 
@@ -100,7 +106,7 @@ public class Container {
                             "injectable constructor for the injectable class %s", cls.getName()));
         } catch (ReflectiveOperationException e) {
             e.printStackTrace();
-            return null; // TODO : do more?
+            return null;
         }
     }
 
@@ -134,7 +140,7 @@ public class Container {
             if (field.isAnnotationPresent(Inject.class)) {
                 field.setAccessible(true);
                 var tag = getTag(field);
-                field.set(instance, instantiate(field.getType(), tag));
+                field.set(instance, instantiateByTag(field.getType(), tag));
             }
         }
     }
@@ -151,16 +157,17 @@ public class Container {
     }
 
     private Object[] getParameters(Class<?>[] parametersTypes, String tag)
-            throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException, CyclicDependenciesException {
+            throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException,
+            CyclicDependenciesException {
 
         var parameters = new ArrayList<>();
         for(var type : parametersTypes) {
-            parameters.add(instantiate(type, tag));
+            parameters.add(instantiateByTag(type, tag));
         }
         return parameters.toArray();
     }
 
-    private String getTag(AccessibleObject accessibleObject) {
+    private static String getTag(AccessibleObject accessibleObject) {
         return accessibleObject.isAnnotationPresent(Tag.class)
                 ? accessibleObject.getAnnotation(Tag.class).value() : null;
     }
@@ -179,8 +186,5 @@ public class Container {
             throws ImplementationNotFoundException, ImplementationAmbiguityException {
 
         return dependencies.findImplementationFromBaseClass(baseClass, tag);
-
-        // https://dev.to/jjbrt/how-to-create-your-own-dependency-injection-framework-in-java-4eaj
-        // Le mettre dans le cr/readme
     }
 }
