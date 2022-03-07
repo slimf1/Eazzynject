@@ -1,6 +1,7 @@
 package fr.gravani.eazzynject;
 
 import fr.gravani.eazzynject.annotations.Inject;
+import fr.gravani.eazzynject.annotations.Singleton;
 import fr.gravani.eazzynject.annotations.Tag;
 import fr.gravani.eazzynject.exceptions.CyclicDependenciesException;
 import fr.gravani.eazzynject.exceptions.ImplementationAmbiguityException;
@@ -16,12 +17,10 @@ import java.util.Map;
 public class Container {
     private static final int MAX_RECURSIVE_INJECTIONS = 32;
 
-    //*** Class attributes
     private final Dependencies dependencies = new Dependencies();
     private final Map<Class<?>, Object> instanceCache = new HashMap<>(); // Use @Singleton annotation
     private final Map<Class<?>, Integer> injectionCounter = new HashMap<>();
 
-    //*** Instances methods
     public void registerMapping(Class<?> child, Class<?> base) throws ImplementationAmbiguityException {
         String tag = child.isAnnotationPresent(Tag.class)
                 ? child.getAnnotation(Tag.class).value() : null;
@@ -66,13 +65,15 @@ public class Container {
                             String.join(",", classesInCycle)));
         }
 
-        if (instanceCache.containsKey(implementation)) {
+        var isSingleton = implementation.isAnnotationPresent(Singleton.class);
+        if (isSingleton && instanceCache.containsKey(implementation)) {
             return (T)instanceCache.get(implementation);
         }
 
         var instance = injectIntoClass(implementation);
-        instanceCache.put(implementation, instance);
-
+        if (isSingleton) {
+            instanceCache.put(implementation, instance);
+        }
         return (T)instance;
     }
 
