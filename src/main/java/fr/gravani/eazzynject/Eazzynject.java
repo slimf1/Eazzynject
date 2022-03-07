@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 
-public class Scanner {
+public class Eazzynject {
 
     private static final Container CONTAINER = new Container();
 
@@ -31,6 +31,11 @@ public class Scanner {
         }
     }
 
+    public static void initContainer(Class<?> rootClass)
+            throws ClassLoaderNotFoundException, IOException, ImplementationAmbiguityException, ClassNotFoundException {
+        initContainer(rootClass.getPackageName());
+    }
+
     public static <T> T getInstance(Class<T> type)
             throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException,
             CyclicDependenciesException {
@@ -40,7 +45,7 @@ public class Scanner {
     public static <T> T getInstance(Class<T> type, String tag)
             throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException,
             CyclicDependenciesException {
-        return CONTAINER.instantiateByTag(type, tag);
+        return CONTAINER.instantiate(type, tag);
     }
 
     private static void registerSuperclassesInterfaces(Class<?> implementationClass, Class<?> superClass)

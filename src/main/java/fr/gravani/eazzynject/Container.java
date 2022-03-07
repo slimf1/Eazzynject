@@ -45,7 +45,7 @@ public class Container {
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T instantiateByTag(Class<T> inter, String tag)
+    private <T> T instantiateByTag(Class<T> inter, String tag)
             throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException,
             CyclicDependenciesException {
 

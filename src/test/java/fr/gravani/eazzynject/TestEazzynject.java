@@ -10,44 +10,44 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TestScanner {
+public class TestEazzynject {
     @Test
     void testPackageScanner() throws Exception {
-        Scanner.initContainer("fr.gravani.eazzynject.testpkg");
+        Eazzynject.initContainer("fr.gravani.eazzynject.testpkg");
 
-        Table table1 = Scanner.getInstance(Table.class);
+        Table table1 = Eazzynject.getInstance(Table.class);
         assertEquals(table1.getName(), "Table with Wooden style");
 
-        Furniture table2 = Scanner.getInstance(Furniture.class);
+        Furniture table2 = Eazzynject.getInstance(Furniture.class);
         assertEquals(table2.getName(), "Table with Wooden style");
 
-        WoodenStyle style1 = Scanner.getInstance(WoodenStyle.class);
+        WoodenStyle style1 = Eazzynject.getInstance(WoodenStyle.class);
         assertEquals(style1.getStyle(), "Wooden");
 
-        Style style2 = Scanner.getInstance(Style.class);
+        Style style2 = Eazzynject.getInstance(Style.class);
         assertEquals(style2.getStyle(), "Wooden");
     }
 
     @Test
     void testPackageScannerBank() throws Exception {
-        Scanner.initContainer("fr.gravani.eazzynject.testpkgbank");
+        Eazzynject.initContainer(fr.gravani.eazzynject.testpkgbank.Bank.class);
 
-        Bank b1 = Scanner.getInstance(Bank.class, "Fortunement");
+        Bank b1 = Eazzynject.getInstance(Bank.class, "Fortunement");
         assertNotNull(b1);
         assertTrue(b1 instanceof Fortunement);
 
-        Bank b2 = Scanner.getInstance(Bank.class, "CreditAgricool");
+        Bank b2 = Eazzynject.getInstance(Bank.class, "CreditAgricool");
         assertNotNull(b2);
         assertTrue(b2 instanceof CreditAgricool);
         assertNotNull(((CreditAgricool) b2).getDabService());
 
 
-        Bank b3 = Scanner.getInstance(Bank.class, "BankOnline");
+        Bank b3 = Eazzynject.getInstance(Bank.class, "BankOnline");
         assertNotNull(b3);
         assertTrue(b3 instanceof BankOnline);
         assertNotNull(((BankOnline)b3).getWebSite());
 
         assertThrows(ImplementationNotFoundException.class,
-                () -> Scanner.getInstance(Bank.class, "FakeBank"));
+                () -> Eazzynject.getInstance(Bank.class, "FakeBank"));
     }
 }
