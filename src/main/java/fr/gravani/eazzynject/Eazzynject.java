@@ -17,7 +17,7 @@ public class Eazzynject {
 
     //*** Static methods
     public static void initContainer(String packageName)
-            throws ClassLoaderNotFoundException, IOException, ClassNotFoundException, ImplementationAmbiguityException {
+            throws IOException, ClassNotFoundException, ImplementationAmbiguityException {
         List<Class<?>> allClassesInPackage = getClasses(packageName);
         var injectableClasses =  allClassesInPackage
                 .stream()
@@ -32,7 +32,7 @@ public class Eazzynject {
     }
 
     public static void initContainer(Class<?> rootClass)
-            throws ClassLoaderNotFoundException, IOException, ImplementationAmbiguityException, ClassNotFoundException {
+            throws IOException, ImplementationAmbiguityException, ClassNotFoundException {
         initContainer(rootClass.getPackageName());
     }
 
@@ -66,11 +66,11 @@ public class Eazzynject {
     }
 
     private static List<Class<?>> getClasses(String packageName)
-            throws ClassLoaderNotFoundException, IOException, ClassNotFoundException {
+            throws IOException, ClassNotFoundException {
 
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         if(classLoader == null) {
-            throw new ClassLoaderNotFoundException("ClassLoader not found for automatic package scanning.");
+            throw new RuntimeException("ClassLoader not found for automatic package scanning.");
         }
         String filePath = packageName.replace('.', '/');
         Enumeration<URL> resources = classLoader.getResources(filePath);

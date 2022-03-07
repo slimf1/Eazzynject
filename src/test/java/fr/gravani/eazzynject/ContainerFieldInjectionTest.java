@@ -1,15 +1,19 @@
 package fr.gravani.eazzynject;
 
 import fr.gravani.eazzynject.annotations.Inject;
-import fr.gravani.eazzynject.annotations.Injectable;
-import fr.gravani.eazzynject.exceptions.*;
+import fr.gravani.eazzynject.exceptions.CyclicDependenciesException;
+import fr.gravani.eazzynject.exceptions.ImplementationAmbiguityException;
+import fr.gravani.eazzynject.exceptions.ImplementationNotFoundException;
+import fr.gravani.eazzynject.exceptions.NoDefaultConstructorException;
 import lombok.Getter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class ContainerTest {
+public class ContainerFieldInjectionTest {
+
     Container container;
 
     interface HttpService {
@@ -20,14 +24,12 @@ public class ContainerTest {
         HttpService getHttpService();
     }
 
-    @Injectable
     static class MySuperUselessService {
         public String getValue() {
             return "super useless";
         }
     }
 
-    @Injectable
     static class MyUselessService {
         @Inject
         private MySuperUselessService mySuperUselessService;
@@ -37,25 +39,18 @@ public class ContainerTest {
         }
     }
 
-    @Injectable
     static class MyOtherUselessService {
         public String getValue() {
             return "other useless";
         }
     }
 
-    @Injectable
     static class RssNewsService implements NewsService {
-
-        private final HttpService httpService;
+        @Inject
+        private HttpService httpService;
 
         @Inject
         private MyUselessService myUselessService;
-
-        @Inject
-        public RssNewsService(HttpService httpService) {
-            this.httpService = httpService;
-        }
 
         @Override
         public HttpService getHttpService() {
@@ -68,19 +63,13 @@ public class ContainerTest {
         }
     }
 
-    @Injectable
     static class DarkWebHttpService implements HttpService {
 
         @Getter
+        @Inject
         private MyOtherUselessService myOtherUselessService;
-
         @Inject
         private MyUselessService myUselessService;
-
-        @Inject
-        void setMyOtherUselessService(MyOtherUselessService myOtherUselessService) {
-            this.myOtherUselessService = myOtherUselessService;
-        }
 
         @Override
         public String getString() {
@@ -92,18 +81,12 @@ public class ContainerTest {
         void method();
     }
 
-    @Injectable
     static class MyService {
         @Getter
-        private final UnimplementedInterface unimplementedInterface;
-
         @Inject
-        public MyService(UnimplementedInterface unimplementedInterface) {
-            this.unimplementedInterface = unimplementedInterface;
-        }
+        private UnimplementedInterface unimplementedInterface;
     }
 
-    @Injectable
     static class EpicService {
         @Getter
         private final String name;
@@ -113,19 +96,16 @@ public class ContainerTest {
         }
     }
 
-    @Injectable // TODO: enlever les injectable des classes de test qui n'en ont pas besoin
     static class CycleA {
         @Inject
         private CycleB cycleB;
     }
 
-    @Injectable
     static class CycleB {
         @Inject
         private CycleC cycleC;
     }
 
-    @Injectable
     static class CycleC {
         @Inject
         private CycleA cycleA;
@@ -138,7 +118,6 @@ public class ContainerTest {
 
     @Test
     void testSimpleInjection() throws Exception {
-        // tout ça => le remplacer avec scan de injectable (get la classe au dessus)
         container.registerMapping(DarkWebHttpService.class, HttpService.class);
         container.registerMapping(RssNewsService.class, NewsService.class);
         container.registerMapping(MyUselessService.class, MyUselessService.class);

@@ -7,10 +7,7 @@ import fr.gravani.eazzynject.exceptions.ImplementationAmbiguityException;
 import fr.gravani.eazzynject.exceptions.ImplementationNotFoundException;
 import fr.gravani.eazzynject.exceptions.NoDefaultConstructorException;
 
-import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import java.lang.reflect.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -126,7 +123,7 @@ public class Container {
             if (method.isAnnotationPresent(Inject.class)) {
                 method.setAccessible(true);
                 var tag = getTag(method);
-                var parameters = getParameters(method.getParameterTypes(), tag);
+                var parameters = getParameters(method.getParameters(), tag);
                 method.invoke(instance, parameters);
             }
         }
@@ -156,15 +153,18 @@ public class Container {
         return instance;
     }
 
-    private Object[] getParameters(Class<?>[] parametersTypes, String tag)
+    private Object[] getParameters(Parameter[] parameters, String constructorTag)
             throws ImplementationNotFoundException, NoDefaultConstructorException, ImplementationAmbiguityException,
             CyclicDependenciesException {
 
-        var parameters = new ArrayList<>();
-        for(var type : parametersTypes) {
-            parameters.add(instantiateByTag(type, tag));
+        var parametersOutput = new ArrayList<>();
+        for(var parameter : parameters) {
+            var type = parameter.getType();
+            var parameterTag = parameter.isAnnotationPresent(Tag.class) ? parameter.getAnnotation(Tag.class).value() : null;
+            var appliedTag = constructorTag == null ? parameterTag : constructorTag;
+            parametersOutput.add(instantiateByTag(type, appliedTag));
         }
-        return parameters.toArray();
+        return parametersOutput.toArray();
     }
 
     private static String getTag(AccessibleObject accessibleObject) {
@@ -178,7 +178,7 @@ public class Container {
             ImplementationAmbiguityException, CyclicDependenciesException {
 
         var tag = getTag(constructor);
-        var parameters = getParameters(constructor.getParameterTypes(), tag);
+        var parameters = getParameters(constructor.getParameters(), tag);
         return (T)constructor.newInstance(parameters);
     }
 

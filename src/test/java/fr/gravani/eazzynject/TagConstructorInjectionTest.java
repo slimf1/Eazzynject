@@ -1,7 +1,6 @@
 package fr.gravani.eazzynject;
 
 import fr.gravani.eazzynject.annotations.Inject;
-import fr.gravani.eazzynject.annotations.Injectable;
 import fr.gravani.eazzynject.annotations.Tag;
 import fr.gravani.eazzynject.exceptions.ImplementationAmbiguityException;
 import fr.gravani.eazzynject.exceptions.ImplementationNotFoundException;
@@ -10,14 +9,13 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TagTest {
+public class TagConstructorInjectionTest {
     Container container;
 
     interface Operator {
         int act(int a, int b);
     }
 
-    @Injectable
     @Tag("add")
     static class AddOperator implements Operator {
         @Override
@@ -26,7 +24,6 @@ public class TagTest {
         }
     }
 
-    @Injectable
     @Tag("subtract")
     static class SubtractOperator implements Operator {
         @Override
@@ -35,7 +32,6 @@ public class TagTest {
         }
     }
 
-    @Injectable
     @Tag("multiply")
     static class MultiplyOperator implements Operator {
         @Override
@@ -44,26 +40,27 @@ public class TagTest {
         }
     }
 
-    @Injectable
     static class DifferenceOfSquaresCalculator {
-        @Inject
-        @Tag("add")
         private Operator add;
 
-        @Inject
-        @Tag("subtract")
         private Operator subtract;
 
-        @Inject
-        @Tag("multiply")
         private Operator multiply;
+
+        @Inject
+        public DifferenceOfSquaresCalculator(@Tag("add") Operator add,
+                                             @Tag("subtract") Operator subtract,
+                                             @Tag("multiply") Operator multiply) {
+            this.add = add;
+            this.subtract = subtract;
+            this.multiply = multiply;
+        }
 
         public int operation(int a, int b) {
             return multiply.act(add.act(a, b), subtract.act(a, b));
         }
     }
 
-    @Injectable
     @Tag("add")
     static class AnotherAddOperator implements Operator {
         @Override
@@ -72,11 +69,13 @@ public class TagTest {
         }
     }
 
-    @Injectable
     static class AdditionCalculator {
-        @Inject
-        @Tag("add")
         private Operator add;
+
+        @Inject
+        public AdditionCalculator(@Tag("add") Operator add) {
+            this.add = add;
+        }
 
         public int operation(int a, int b) {
             return add.act(a, b);
@@ -87,7 +86,6 @@ public class TagTest {
         String getName();
     }
 
-    @Injectable
     static class CreditAgricool implements Bank {
         @Override
         public String getName() {
@@ -95,7 +93,6 @@ public class TagTest {
         }
     }
 
-    @Injectable
     static class FortuneBank implements Bank {
         @Override
         public String getName() {
@@ -103,17 +100,18 @@ public class TagTest {
         }
     }
 
-    @Injectable
     static class MyAccount {
         @Inject
         private Bank bank;
     }
 
-    @Injectable
     static class MyCalculator {
-        @Inject
-        @Tag("average")
         private Operator averageOperator;
+
+        @Inject
+        public MyCalculator(@Tag("average") Operator averageOperator) {
+            this.averageOperator = averageOperator;
+        }
     }
 
     @BeforeEach
@@ -135,7 +133,6 @@ public class TagTest {
 
     @Test
     void testAmbiguousTag() throws Exception {
-        //*** A voir, l'exception est lancée lors du register ambigu et non pas lors de l'instanciation
         container.registerMapping(AddOperator.class, Operator.class);
         assertThrows(ImplementationAmbiguityException.class,
                 () -> container.registerMapping(AnotherAddOperator.class, Operator.class));
@@ -146,7 +143,6 @@ public class TagTest {
 
     @Test
     void testAmbiguousImplementationWithoutTag() throws Exception {
-        //*** A voir, l'exception est lancée lors du register ambigu et non pas lors de l'instanciation
         container.registerMapping(CreditAgricool.class, Bank.class);
         assertThrows(ImplementationAmbiguityException.class,
                 () -> container.registerMapping(FortuneBank.class, Bank.class));
@@ -164,5 +160,16 @@ public class TagTest {
 
         assertThrows(ImplementationNotFoundException.class,
                 () -> container.instantiate(MyCalculator.class));
+    }
+
+    @Test
+    void testInstantiateSpecificTag() throws Exception {
+        container.registerMapping(AddOperator.class, Operator.class);
+        container.registerMapping(SubtractOperator.class, Operator.class);
+        container.registerMapping(MultiplyOperator.class, Operator.class);
+        container.registerMapping(MyCalculator.class, MyCalculator.class);
+
+        Operator operator = container.instantiate(Operator.class, "add");
+        assertTrue(operator instanceof AddOperator);
     }
 }
