@@ -18,7 +18,7 @@ public class Container {
     private static final int MAX_RECURSIVE_INJECTIONS = 32;
 
     private final Dependencies dependencies = new Dependencies();
-    private final Map<Class<?>, Object> instanceCache = new HashMap<>(); // Use @Singleton annotation
+    private final Map<Class<?>, Object> instanceCache = new HashMap<>();
     private final Map<Class<?>, Integer> injectionCounter = new HashMap<>();
 
     public void registerMapping(Class<?> child, Class<?> base) throws ImplementationAmbiguityException {

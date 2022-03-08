@@ -31,7 +31,7 @@ public class ContainerConstructorInjectionTest {
     }
 
     static class MyUselessService {
-        private MySuperUselessService mySuperUselessService;
+        private final MySuperUselessService mySuperUselessService;
 
         @Inject
         public MyUselessService(MySuperUselessService mySuperUselessService) {
@@ -53,7 +53,7 @@ public class ContainerConstructorInjectionTest {
 
         private final HttpService httpService;
 
-        private MyUselessService myUselessService;
+        private final MyUselessService myUselessService;
 
         @Inject
         public RssNewsService(MyUselessService myUselessService, HttpService httpService) {
@@ -116,7 +116,8 @@ public class ContainerConstructorInjectionTest {
     }
 
     static class CycleA {
-        private CycleB cycleB;
+        @Getter
+        private final CycleB cycleB;
 
         @Inject
         public CycleA(CycleB cycleB) {
@@ -125,7 +126,8 @@ public class ContainerConstructorInjectionTest {
     }
 
     static class CycleB {
-        private CycleC cycleC;
+        @Getter
+        private final CycleC cycleC;
 
         @Inject
         public CycleB(CycleC cycleC) {
@@ -134,7 +136,8 @@ public class ContainerConstructorInjectionTest {
     }
 
     static class CycleC {
-        private CycleA cycleA;
+        @Getter
+        private final CycleA cycleA;
 
         @Inject
         public CycleC(CycleA cycleA) {

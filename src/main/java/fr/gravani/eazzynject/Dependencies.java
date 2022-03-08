@@ -7,11 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Dependencies {
-    private final List<ImplementationsLink> dependencies;
-
-    public Dependencies() {
-        dependencies = new ArrayList<>();
-    }
+    private final List<ImplementationsLink> dependencies = new ArrayList<>();
 
     public void put(Class<?> base, Class<?> child, String tag) throws ImplementationAmbiguityException {
         boolean found = false;
@@ -27,7 +23,9 @@ public class Dependencies {
         }
     }
 
-    public Class<?> findImplementationFromBaseClass(Class<?> baseClass, String tag) throws ImplementationNotFoundException, ImplementationAmbiguityException {
+    public Class<?> findImplementationFromBaseClass(Class<?> baseClass, String tag)
+            throws ImplementationNotFoundException, ImplementationAmbiguityException {
+
         for(ImplementationsLink implementationsLink : dependencies) {
             if(implementationsLink.getBaseClass().equals(baseClass)) {
                 if(tag == null) {
