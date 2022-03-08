@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TestEazzynject {
+public class EazzynjectTest {
     @Test
     void testPackageScanner() throws Exception {
         Eazzynject.initContainer("fr.gravani.eazzynject.testpkg");
