@@ -1,4 +1,7 @@
 # TP 2 Java Pro - Eazzynject
+
+[![CI/CD](https://github.com/slimf1/Eazzynject/actions/workflows/maven.yml/badge.svg)](https://github.com/slimf1/Eazzynject/actions/workflows/maven.yml)
+
 > Travail de Dorian GRAVEGEAL et Slimane FAKANI
 
 Eazzynject est un conteneur d'injection de dépendances.
