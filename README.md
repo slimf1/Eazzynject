@@ -46,6 +46,21 @@ Pour cette partie, nous avons fait plusieurs essais de structure de données ava
 ### Détection des cycles lors de l'injection
 L'injection de dépendance étant récursive lors de la construction des instances, nous nous somme heurté au problème de gestion des dépendances circulaires, qui conduisent à une boucle infinie lors de l'instanciation d'un objet. Nous avons traité ce problème par l'utilisation d'un compteur qui est incrémenté à chaque appel récursif d'injection. Nous avons considéré qu'a partir de 32 injections récursives d'un même type, nous sommes dans le cas d'une dépendance circulaire. Nous lançons alors une exception pour couper la boucle. 
 
+## Tests
+
+Nous avons défini plusieurs cas de test que nous appliquons sur tous les types d'injection (setter, constructeur, field, mélangé) : 
+* Divers injections recursives avec éventuellement plusieurs services à injecter 
+* Dépendances circulaires
+* Injection par tag
+
+Nous testons également le singleton et le scan de package.
+
+Nous arrivons à un taux de code coverage de 94%.
+
+## Documentation
+
+Une bibliothèque tierce se doit d'avoir une documentation bien fournie. Nous avons donc généré automatiquement la documentation avec JavaDoc. Elle est disponible dans le dossier ``/doc`` à la racine du projet.
+
 ## Sources
 
 Nous nous sommes inspirés de ce tutoriel :
