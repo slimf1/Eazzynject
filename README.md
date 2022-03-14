@@ -57,6 +57,9 @@ Nous testons également le singleton et le scan de package.
 
 Nous arrivons à un taux de code coverage de 94%.
 
+![Code coverage at 94 percent](https://github.com/slimf1/Eazzynject/blob/master/codecov.png?raw=true)
+
+
 ## Documentation
 
 Une bibliothèque tierce se doit d'avoir une documentation bien fournie. Nous avons donc généré automatiquement la documentation avec JavaDoc. Elle est disponible dans le dossier ``/doc`` à la racine du projet.
