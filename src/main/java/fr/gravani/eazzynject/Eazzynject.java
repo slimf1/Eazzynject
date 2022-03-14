@@ -11,6 +11,9 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 
+/**
+ * The main class of the library, contains the package scanning methods and the injection container
+ */
 public class Eazzynject {
 
     /**
